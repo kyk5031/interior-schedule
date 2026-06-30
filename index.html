@@ -69,6 +69,21 @@
   .day-list-modal .site-row .info .tg{font-size:11px;color:var(--accent);}
   .addnew{display:flex;align-items:center;justify-content:center;gap:4px;padding:10px;border:1px dashed var(--border);border-radius:8px;color:var(--sub);cursor:pointer;font-size:13px;}
   .addnew:hover{background:var(--bg);}
+
+  /* Detail view */
+  .detail-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+  .detail-head .dot{width:12px;height:12px;border-radius:50%;flex:none;}
+  .detail-head h2{margin:0;font-size:17px;}
+  .detail-row{margin-bottom:14px;}
+  .detail-row .label{font-size:11px;color:var(--sub);margin-bottom:3px;}
+  .detail-row .value{font-size:14px;line-height:1.5;white-space:pre-wrap;}
+  .detail-row .value.empty{color:#ccc;}
+  .detail-tags span{display:inline-block;background:var(--bg);border-radius:14px;padding:4px 10px;font-size:12px;margin:0 6px 6px 0;}
+  .phone-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .phone-actions .num{font-size:14px;font-weight:600;}
+  .phone-actions a{font-size:12px;text-decoration:none;border:1px solid var(--border);border-radius:14px;padding:4px 10px;color:var(--text);}
+  .phone-actions a.call{color:#fff;background:var(--accent);border-color:var(--accent);}
+  .phone-actions a.sms{color:var(--accent);}
 </style>
 </head>
 <body>
@@ -98,6 +113,44 @@
     <div class="modal-actions">
       <div></div>
       <div class="right"><button class="btn btn-plain" onclick="closeModal('dayListOverlay')">닫기</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Site detail (read-only) modal -->
+<div class="overlay" id="siteDetailOverlay">
+  <div class="modal">
+    <div class="detail-head">
+      <div class="dot" id="d_dot"></div>
+      <h2 id="d_name"></h2>
+    </div>
+    <div class="detail-row">
+      <div class="label">주소</div>
+      <div class="value" id="d_addr"></div>
+      <a href="#" target="_blank" class="addr-link" id="d_addrLink">🗺 지도에서 보기</a>
+    </div>
+    <div class="detail-row">
+      <div class="label">기간</div>
+      <div class="value" id="d_period"></div>
+    </div>
+    <div class="detail-row">
+      <div class="label">시공 항목</div>
+      <div class="detail-tags" id="d_tags"></div>
+    </div>
+    <div class="detail-row">
+      <div class="label">협력업체 / 연락처</div>
+      <div id="d_vendor"></div>
+    </div>
+    <div class="detail-row">
+      <div class="label">메모</div>
+      <div class="value" id="d_memo"></div>
+    </div>
+    <div class="modal-actions">
+      <div><button class="btn btn-danger" id="d_deleteBtn">삭제</button></div>
+      <div class="right">
+        <button class="btn btn-plain" onclick="closeModal('siteDetailOverlay')">닫기</button>
+        <button class="btn btn-primary" id="d_editBtn">수정</button>
+      </div>
     </div>
   </div>
 </div>
@@ -167,7 +220,7 @@
 
 <script>
 const STORAGE_KEY = "interior_schedule_sites_v1";
-const TAG_PRESETS = ["철거","목공","전기","배관","타일","도배","바닥","조명","도장","필름","단열","커튼박스","감지기","마감","기타"];
+const TAG_PRESETS = ["철거","목공","전기","배관","타일","도배","장판","필름","실링팬"];
 const COLORS = ["#3b6ef0","#e35353","#2bb673","#f0a73b","#9b59b6","#16a3a3","#e36ec0"];
 
 let sites = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -230,7 +283,7 @@ function renderCalendar(){
       card.className = "site-card";
       card.style.background = s.color;
       card.innerHTML = `<div class="nm">${escapeHtml(s.name)}</div><div class="tags">${s.tags.join(" · ")}</div>`;
-      card.onclick = (e)=>{ e.stopPropagation(); openSiteModal(s.id); };
+      card.onclick = (e)=>{ e.stopPropagation(); openSiteDetail(s.id); };
       day.appendChild(card);
     });
     if(daySites.length>3){
@@ -263,11 +316,69 @@ function openDayList(dateStr){
         <div class="ad">${escapeHtml(s.addr||"주소 미입력")}</div>
         <div class="tg">${s.tags.join(" · ")}</div>
       </div>`;
-    row.onclick = ()=>openSiteModal(s.id);
+    row.onclick = ()=>openSiteDetail(s.id);
     body.appendChild(row);
   });
   document.getElementById("addnewBtn").onclick = ()=>{ closeModal("dayListOverlay"); openSiteModal(null, dateStr); };
   openModal("dayListOverlay");
+}
+
+function extractPhones(text){
+  if(!text) return [];
+  const matches = text.match(/01[0-9][-.\s]?\d{3,4}[-.\s]?\d{4}/g) || [];
+  return [...new Set(matches.map(m=>m.replace(/[^0-9]/g,"")))];
+}
+
+function openSiteDetail(id){
+  const s = sites.find(x=>x.id===id);
+  if(!s) return;
+  editingId = id;
+
+  document.getElementById("d_dot").style.background = s.color;
+  document.getElementById("d_name").textContent = s.name;
+  document.getElementById("d_addr").textContent = s.addr || "-";
+  document.getElementById("d_addr").className = "value"+(s.addr?"":" empty");
+  document.getElementById("d_addrLink").href = "https://map.naver.com/p/search/"+encodeURIComponent(s.addr||s.name);
+  document.getElementById("d_period").textContent = s.start===s.end ? s.start : `${s.start} ~ ${s.end}`;
+
+  const tagsWrap = document.getElementById("d_tags");
+  tagsWrap.innerHTML = s.tags.length ? s.tags.map(t=>`<span>${escapeHtml(t)}</span>`).join("") : `<span style="color:#ccc;background:none;padding:0;">미입력</span>`;
+
+  const vendorWrap = document.getElementById("d_vendor");
+  vendorWrap.innerHTML = "";
+  if(!s.vendor){
+    vendorWrap.innerHTML = `<div class="value empty">-</div>`;
+  } else {
+    const phones = extractPhones(s.vendor);
+    const head = document.createElement("div");
+    head.className = "value";
+    head.textContent = s.vendor;
+    vendorWrap.appendChild(head);
+    phones.forEach(p=>{
+      const row = document.createElement("div");
+      row.className = "phone-actions";
+      row.style.marginTop = "6px";
+      row.innerHTML = `<span class="num">${p}</span>
+        <a class="call" href="tel:${p}">📞 전화</a>
+        <a class="sms" href="sms:${p}">💬 문자</a>`;
+      vendorWrap.appendChild(row);
+    });
+  }
+
+  const memo = document.getElementById("d_memo");
+  memo.textContent = s.memo || "-";
+  memo.className = "value"+(s.memo?"":" empty");
+
+  document.getElementById("d_editBtn").onclick = ()=>{ closeModal("siteDetailOverlay"); openSiteModal(s.id); };
+  document.getElementById("d_deleteBtn").onclick = ()=>{
+    if(!confirm("이 현장을 삭제할까요?")) return;
+    sites = sites.filter(x=>x.id!==s.id);
+    saveSites();
+    closeModal("siteDetailOverlay");
+    renderCalendar();
+  };
+
+  openModal("siteDetailOverlay");
 }
 
 function buildTagPresets(){
@@ -402,7 +513,7 @@ document.getElementById("addrBookBtn").onclick = ()=>{
         row.style.marginBottom = "4px";
         row.innerHTML = `<div class="dot" style="background:${s.color}"></div>
           <div class="info"><div class="nm">${escapeHtml(s.name)}</div><div class="ad">${escapeHtml(s.addr||"")}</div></div>`;
-        row.onclick = ()=>{ window.open("https://map.naver.com/p/search/"+encodeURIComponent(s.addr||s.name),"_blank"); };
+        row.onclick = ()=>{ closeModal("routeOverlay"); openSiteDetail(s.id); };
         block.appendChild(row);
       });
     }
@@ -411,7 +522,7 @@ document.getElementById("addrBookBtn").onclick = ()=>{
   openModal("routeOverlay");
 };
 
-[document.getElementById("dayListOverlay"),document.getElementById("siteOverlay"),document.getElementById("routeOverlay")].forEach(ov=>{
+[document.getElementById("dayListOverlay"),document.getElementById("siteOverlay"),document.getElementById("siteDetailOverlay"),document.getElementById("routeOverlay")].forEach(ov=>{
   ov.addEventListener("click", e=>{ if(e.target===ov) ov.classList.remove("show"); });
 });
 
