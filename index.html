@@ -32,15 +32,16 @@
   .btn-danger:hover{background:#fbd9e0;}
   .btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;}
 
-  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);margin:18px 24px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
-  .dow{background:#fafbfd;text-align:center;padding:10px 0;font-size:12px;color:var(--sub);font-weight:700;}
+  .calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--border);margin:18px 12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+  .dow{background:#fafbfd;text-align:center;padding:10px 0;font-size:12px;color:var(--sub);font-weight:700;min-width:0;}
   .dow.sun{color:var(--danger);} .dow.sat{color:var(--accent);}
-  .day{background:var(--card);min-height:128px;padding:8px 6px;display:flex;flex-direction:column;gap:4px;cursor:pointer;position:relative;transition:.12s;}
+  .day{background:var(--card);min-height:128px;min-width:0;padding:8px 6px;display:flex;flex-direction:column;gap:4px;cursor:pointer;position:relative;transition:.12s;overflow:hidden;}
   .day.other{background:#fbfbfd;opacity:.5;}
   .day:hover{background:#f8f9ff;}
   .daynum{font-size:12px;color:var(--sub);font-weight:700;align-self:flex-start;padding:2px 4px;}
   .daynum.today{background:var(--accent);color:#fff;border-radius:7px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0;}
-  .site-card{font-size:11px;border-radius:7px;padding:4px 7px;color:#fff;line-height:1.4;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:.12s;}
+  .site-card{font-size:11px;border-radius:7px;padding:4px 7px;color:#fff;line-height:1.4;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:.12s;min-width:0;width:100%;}
+  .site-card .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .site-card:hover{filter:brightness(1.08);transform:translateY(-1px);}
   .site-card .tags{opacity:.85;font-weight:500;}
   .more{font-size:10px;color:var(--sub);padding-left:4px;font-weight:600;}
